@@ -1,0 +1,17 @@
+replica:
+    replicaCount: 1
+    persistence:
+        enabled: false 
+
+
+networkPolicy:
+  enabled: false # change networkPolicy enabled to 'false' from 'true'. This enables the app to discover the cluster easily.
+  allowExternal: true # changed networkPolicy allowExternal from 'false' to 'true'. 
+
+auth:
+  existingSecret: redis-secret # mentioned app-secret to retrieve the redis-password we had initially created in step 2
+  existingSecretPasswordKey: redis-password # mentioned the key which hold the base64 encoded hash of the password.
+  
+master:
+    persistence:
+        enabled: false # changed persistence enabled to false. minikube doesn't support persistence for redis. 

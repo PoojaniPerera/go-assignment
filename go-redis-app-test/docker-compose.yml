@@ -1,0 +1,27 @@
+---
+version: "3.9"
+services:
+  web:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+    environment:
+      PORT: "8080"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"      
+      REDIS_DB: "0"
+      REDIS_PASSWORD: "redi123"
+      
+  redis:
+    image: redis:alpine
+    container_name: my-redis
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+    volumes:
+      #- redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf   
+    ports:
+      - "6379:6379"
+ 

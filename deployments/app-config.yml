@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: app-config
+data:
+    redis-service: go-redis-app-master:6379
+    redis-host: go-redis-app-master

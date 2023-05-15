@@ -1,0 +1,102 @@
+1. FIRST WE NEED TO CREATE DOCKER IMAGES FOR GO-APP
+docker build -t my-go-app .
+2. pUSH THE DOCKERIZE IMAGE TO DOCKERHUB
+docker tag 
+docker push
+ 26 cd go-redis-app-test
+  27 go mod init github.com/PoojaniPerera/go-redis-app-test
+  28 go mod tidy
+  29 go get .
+  30 go get .
+  31 go mod tidy
+  32 docker-compose up
+  33 docker-compose up
+  34 docker-compose up
+  35 docker build -t my-go-redis-app .
+  36 docker tag  my-go-redis-app .
+  37 docker tag my-go-redis-app poojani/my-go-redis-app:v1
+  38 docker login
+  39 docker push poojani/my-go-redis-app:v1
+
+
+
+3. CREATE DEPLOYMENT AND SERVICE FILES FOR BOTH GO SERVER AND REDIS SERVER
+4. CREATE A CONFIG MAP TO STORE REDIS.CONF CONFIGURATION TO PASSWORD PROTECT REDIS.
+
+5. KUBECTL APPLY ALL MANIFEST FILES
+kubectl apply -f redis-config.yaml
+kubectl apply -f go-redis-app.yaml
+kubectl apply -f redis-master.yaml
+
+6 creat a redi-secret.yaml file and create a secret to store db password config
+kubectl apply -f redis-secret.yaml
+minikube service go-redis-app-service --url
+
+To make redis server highly available wwith data persistency we can create it as a statefulset type and point to remote storage. Also this would nee configuring master and slave nodes of redis cluster and we will have to configure data syncronization as well. In kuberenetes recommend approach is to deploy stateless apps. So in this solution i thought of not implementing it as a stateful approach.
+
+can use ingress and cluster ip to access from outside
+or use loadbalaner
+
+
+
+commands /
+
+minikube start
+kubectl create ns example
+kubectl get storageclass
+  --- standard
+
+kubectl -n example apply -f deployments/redis-secret.yaml
+kubectl -n example apply -f deployments/redis-config.yaml
+kubectl -n example apply -f deployments/metalib-config.yml
+kubectl -n example apply -f deployments/redis-master.yml
+
+ $IPs = $(kubectl -n example get pods -l app=redis -o jsonpath='{range.items[*]}{.status.podIP}:6379 ') -replace "(:6379)\s*$", ""
+ kubectl -n example exec -it redis-master-0 -- /bin/sh -c "redis-cli -h 127.0.0.1 -p 6379 AUTH 'redis123' && redis-cli -h 127.0.0.1 -p 6379 --cluster create--cluster-replicas 1 $IPs -a 'redis123'"
+
+kubectl exec -it redis-cluster-0 -- redis-cli --cluster create --cluster-replicas 1 $(kubectl get pods -l app=redis-cluster -o jsonpath='{range.items[*]}{.status.podIP}:6379 ')
+
+kubectl -n example exec -it redis-master-0  -- /bin/sh -c "redis-cli -h 127.0.0.1 -p 6379 -a 'redis123' cluster info"
+
+kubectl -n example apply -f deployments/go-redis-app.yml
+
+minikube service go-redis-app-service -n example --url
+ kubectl -n example get svc go-redis-app-service
+ kubectl -n example port-forward service/go-redis-app-service 9090:9090
+
+for x in $(seq 0 2); do echo "redis-master-$x"; kubectl -n example exec redis-master-$x -- redis-cli role; echo; done
+
+kubectl -n example exec -it redis-master-0 -- /bin/sh -c "redis-cli -h 127.0.0.1 -p 6379 -a 'redis123'"
+
+kubectl -n example exec redis-master-0 -- redis-cli role
+
+#todo : readme.md
+find out why we cant add more replicas for go app
+ingress controller
+helm charts
+----------------------
+
+kubectl apply -f deployments/redis-secret.yaml
+ helm repo add bitnami https://charts.bitnami.com/bitnami
+ helm install go-redis-app bitnami/redis --values deployments/values-redis.yml
+kubectl apply -f deployments/app-config.yml
+kubectl apply -f deployments/go-redis-app.yml
+
+----------------------------
+
+replica:
+    replicaCount: 1
+    persistence:
+        enabled: false 
+
+
+networkPolicy:
+  enabled: false # change networkPolicy enabled to 'false' from 'true'. This enables the app to discover the cluster easily.
+  allowExternal: true # changed networkPolicy allowExternal from 'false' to 'true'. 
+
+auth:
+  existingSecret: redis-secret # mentioned app-secret to retrieve the redis-password we had initially created in step 2
+  existingSecretPasswordKey: redis-password # mentioned the key which hold the base64 encoded hash of the password.
+master:
+    persistence:
+        enabled: false # changed persistence enabled to false. minikube doesn't support persistence for redis. 

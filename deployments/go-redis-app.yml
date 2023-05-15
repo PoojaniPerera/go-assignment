@@ -1,0 +1,61 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-redis-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: go-redis-app
+  template:
+    metadata:
+      labels:
+        app: go-redis-app
+    spec:
+      containers:
+      - name: go-redis-app
+        image: poojani/my-go-redis-app:v1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        env:
+        - name: REDIS_URL
+          valueFrom:
+             configMapKeyRef:
+              name: app-config
+              key: redis-service
+        - name: REDIS_HOST
+          valueFrom:
+             configMapKeyRef:
+              name: app-config
+              key: redis-host
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+             secretKeyRef:
+              name: redis-secret
+              key: redis-password
+        - name: REDIS_DB
+          value: "0"
+        - name: PORT
+          value: "8080"
+         
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-redis-app-service
+spec:
+  selector:
+    app: go-redis-app
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    nodePort: 30000        
+  type: NodePort
+
